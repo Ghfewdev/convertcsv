@@ -89,11 +89,10 @@ app.get('/api/data3', (req, res) => {
       if (page < 1) page = 1;
       if (limit < 1) limit = 10;
 
-      // ✅ เช็ก name, email ก่อน toLowerCase
       const filteredData = jsonData.filter(item => {
-        const name = item.idcard ? item.idcard.toLowerCase() : "";
-        const email = item.dspname ? item.dspname.toLowerCase() : "";
-        return name.includes(search) || email.includes(search);
+        const idcard = item.idcard ? item.idcard.toLowerCase() : "";
+        const dspname = item.dspname ? item.dspname.toLowerCase() : "";
+        return idcard.includes(search) || dspname.includes(search);
       });
 
       const startIndex = (page - 1) * limit;
@@ -117,10 +116,8 @@ app.get('/api/data3', (req, res) => {
 });
 
 
-
 app.get('/api/data5', (req, res) => {
-
-  const jsonPath = path.join(__dirname, 'output5.json');
+  const jsonPath = path.join(__dirname, 'output12.json');
 
   fs.readFile(jsonPath, 'utf8', (err, data) => {
     if (err) {
@@ -130,13 +127,92 @@ app.get('/api/data5', (req, res) => {
 
     try {
       const jsonData = JSON.parse(data);
-      res.json(jsonData);
+
+      let page = parseInt(req.query.page) || 1;
+      let limit = parseInt(req.query.limit) || 10;
+      const control = (Number(req.query.control) || 0);
+      const ampurFilter = (req.query.ampur || '').toLowerCase();
+      const maleFilter = (req.query.male || '').toLowerCase();
+      const ageGroup = parseInt(req.query.ageGroup) || 0; // 1–5
+
+      if (page < 1) page = 1;
+      if (limit < 1) limit = 10;
+
+      let ageMin = 0;
+      let ageMax = 200; // large number for "unlimited"
+      switch (ageGroup) {
+        case 1:
+          ageMax = 12;
+          break;
+        case 2:
+          ageMin = 13;
+          ageMax = 34;
+          break;
+        case 3:
+          ageMin = 35;
+          ageMax = 44;
+          break;
+        case 4:
+          ageMin = 45;
+          ageMax = 59;
+          break;
+        case 5:
+          ageMin = 60;
+          break;
+        default:
+          ageMin = 0;
+          ageMax = 200;
+      }
+
+      let hba1cMin = 0;
+      let hba1cMax = 20;
+      switch (control) {
+        case 1:
+          hba1cMax = 6.9;
+          break;
+        case 2:
+          hba1cMin = 7;
+          break;
+        default:
+          hba1cMin = 0;
+          hba1cMax = 20;
+      }
+
+      const filteredData = jsonData.filter(item => {
+        const hba1c = Number(item.hba1c) || 0;
+        const ampur = item.ampur?.toLowerCase() || '';
+        const male = item.male?.toLowerCase() || '';
+        const age = parseInt(item.age) || 0;
+
+        return (
+          (hba1c >= hba1cMin && hba1c <= hba1cMax) &&
+          (!ampurFilter || ampur.includes(ampurFilter)) &&
+          (!maleFilter || male === maleFilter) &&
+          (age >= ageMin && age <= ageMax)
+        );
+      });
+
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+      const paginatedData = filteredData.slice(startIndex, endIndex);
+
+      res.json({
+        page,
+        limit,
+        totalItems: filteredData.length,
+        totalPages: Math.ceil(filteredData.length / limit),
+        data: paginatedData
+      });
+
     } catch (parseErr) {
       console.error('Error parsing JSON:', parseErr);
       res.status(500).json({ error: 'Invalid JSON format' });
     }
   });
 });
+
+
+
 
 app.get('/api/data12', (req, res) => {
 
@@ -179,7 +255,6 @@ app.get('/api/data19', (req, res) => {
 });
 
 app.get('/api/data5', (req, res) => {
-
   const jsonPath = path.join(__dirname, 'output5.json');
 
   fs.readFile(jsonPath, 'utf8', (err, data) => {
@@ -190,13 +265,110 @@ app.get('/api/data5', (req, res) => {
 
     try {
       const jsonData = JSON.parse(data);
-      res.json(jsonData);
+
+      let page = parseInt(req.query.page) || 1;
+      let limit = parseInt(req.query.limit) || 10;
+      const control = (req.query.control || "");
+      const ampurFilter = (req.query.ampur || '').toLowerCase();
+      const maleFilter = (req.query.male || '').toLowerCase();
+      const ageGroup = parseInt(req.query.ageGroup) || 0; // 1–5
+
+      if (page < 1) page = 1;
+      if (limit < 1) limit = 10;
+
+      let ageMin = 0;
+      let ageMax = 200; // large number for "unlimited"
+      switch (ageGroup) {
+        case 1:
+          ageMax = 12;
+          break;
+        case 2:
+          ageMin = 13;
+          ageMax = 34;
+          break;
+        case 3:
+          ageMin = 35;
+          ageMax = 44;
+          break;
+        case 4:
+          ageMin = 45;
+          ageMax = 59;
+          break;
+        case 5:
+          ageMin = 60;
+          break;
+        default:
+          ageMin = 0;
+          ageMax = 200;
+      }
+
+      let hba1cMin = "";
+      let hba1cMax = "";
+      switch (control) {
+        case 1:
+          hba1cMax = "6.9";
+          break;
+        case 2:
+          hba1cMin = "7";
+          hba1cMax = "10";
+          break;
+        default:
+          hba1cMin = "";
+          hba1cMax = "";
+      }
+
+      const filteredData = jsonData.filter(item => {
+        const hba1c = item.hba1c || "";
+        const ampur = item.ampur?.toLowerCase() || '';
+        const male = item.male?.toLowerCase() || '';
+        const age = parseInt(item.age) || 0;
+
+        return (
+          (hba1c >= hba1cMin && hba1c <= hba1cMax) &&
+          (!ampurFilter || ampur.includes(ampurFilter)) &&
+          (!maleFilter || male === maleFilter) &&
+          (age >= ageMin && age <= ageMax)
+        );
+      });
+
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+      const paginatedData = filteredData.slice(startIndex, endIndex);
+
+      res.json({
+        page,
+        limit,
+        totalItems: filteredData.length,
+        totalPages: Math.ceil(filteredData.length / limit),
+        data: paginatedData
+      });
+
     } catch (parseErr) {
       console.error('Error parsing JSON:', parseErr);
       res.status(500).json({ error: 'Invalid JSON format' });
     }
   });
 });
+
+// app.get('/api/data5', (req, res) => {
+
+//   const jsonPath = path.join(__dirname, 'output5.json');
+
+//   fs.readFile(jsonPath, 'utf8', (err, data) => {
+//     if (err) {
+//       console.error('Error reading JSON file:', err);
+//       return res.status(500).json({ error: 'Unable to read JSON data' });
+//     }
+
+//     try {
+//       const jsonData = JSON.parse(data);
+//       res.json(jsonData);
+//     } catch (parseErr) {
+//       console.error('Error parsing JSON:', parseErr);
+//       res.status(500).json({ error: 'Invalid JSON format' });
+//     }
+//   });
+// });
 
 app.post('/api/load/data1', (req, res) => {
   fs.readFile(inputFile1, (err, data) => {
